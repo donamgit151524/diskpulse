@@ -29,6 +29,7 @@
 
       <div class="sidebar-footer">
         <button id="btn-scan-all" class="btn btn-primary full-width">Quét tất cả ngay</button>
+        <button id="btn-backup" class="btn btn-ghost full-width">Sao lưu dữ liệu (.zip)</button>
         <div id="sidebar-status" class="sidebar-status">Sẵn sàng</div>
       </div>
     </aside>
@@ -255,6 +256,16 @@
             <span id="settings-msg" class="muted"></span>
           </div>
         </form>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Sao lưu &amp; Khôi phục (Google Drive / USB)</h2>
+              <p class="muted">Xuất 1 file .zip sạch (gồm database snapshot + cấu hình) ngay khi app đang chạy — kéo thả thẳng lên Google Drive. Khi đổi/reset máy, giải nén vào %LocalAppData%\DiskPulse trước khi mở app.</p>
+            </div>
+            <button id="btn-backup-settings" class="btn btn-ghost">Tải bản sao lưu (.zip)</button>
+          </div>
+        </div>
       </section>
     </main>
   </div>

@@ -1,10 +1,13 @@
 package server
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"math"
 	"net"
@@ -57,6 +60,7 @@ func (s *Server) buildMux() (http.Handler, error) {
 	mux.HandleFunc("/api/alerts/ack-all", s.handleAlertAckAll)
 	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/open-explorer", s.handleOpenExplorer)
+	mux.HandleFunc("/api/backup/download", s.handleBackupDownload)
 
 	staticSub, err := fs.Sub(web.StaticFS, "static")
 	if err != nil {
@@ -472,6 +476,74 @@ func (s *Server) handleOpenExplorer(w http.ResponseWriter, r *http.Request) {
 		_ = exec.Command("explorer.exe", "/select,", clean).Start()
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"opened": clean})
+}
+
+func (s *Server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tmpDir, err := os.MkdirTemp("", "diskpulse-backup-*")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
+	backupDB := filepath.Join(tmpDir, "diskpulse.db")
+	if err := s.store.ExportBackup(backupDB); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+
+	dbFile, err := os.Open(backupDB)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	dbEntry, err := zw.Create("diskpulse.db")
+	if err != nil {
+		_ = dbFile.Close()
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	if _, err := io.Copy(dbEntry, dbFile); err != nil {
+		_ = dbFile.Close()
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	_ = dbFile.Close()
+
+	cfgBytes, err := json.MarshalIndent(s.engine.Config(), "", "  ")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	cfgEntry, err := zw.Create("config.json")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	if _, err := cfgEntry.Write(cfgBytes); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if err := zw.Close(); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	filename := fmt.Sprintf("diskpulse-backup-%s.zip", time.Now().Format("20060102-150405"))
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
 }
 
 func writeJSON(w http.ResponseWriter, status int, data any) {

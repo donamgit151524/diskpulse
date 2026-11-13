@@ -519,3 +519,10 @@ func (s *Store) ApplyRetention(driveRoot string, now time.Time) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+// ExportBackup creates a clean, compacted, standalone SQLite copy at destPath without stopping the running store.
+func (s *Store) ExportBackup(destPath string) error {
+	escaped := strings.ReplaceAll(filepath.ToSlash(destPath), "'", "''")
+	_, err := s.db.Exec(fmt.Sprintf(`VACUUM INTO '%s'`, escaped))
+	return err
+}

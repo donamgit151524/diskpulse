@@ -59,7 +59,16 @@ go build -ldflags="-s -w -H=windowsgui" -o diskpulse.exe ./cmd/diskpulse
 
 ---
 
-## Sao lưu dữ liệu lên Git (Private Repo)
+## Sao lưu dữ liệu (Google Drive hoặc Git)
+
+### Cách khuyên dùng: Sao lưu 1 chạm lên Google Drive
+
+Trên Dashboard, bấm nút **Sao lưu dữ liệu (.zip)** ở thanh bên trái (hoặc trong tab **Cài đặt**). App sẽ dùng `VACUUM INTO` của SQLite để đóng gói một file `diskpulse-backup-YYYYMMDD-HHMMSS.zip` sạch (gồm `diskpulse.db` và `config.json`) **ngay khi đang chạy mà không cần tắt app**.
+
+- Kéo thả file `.zip` này lên Google Drive (hoặc lưu vào thư mục Google Drive Desktop).
+- Khi reset máy / sang máy mới: giải nén file `.zip` vào `%LocalAppData%\DiskPulse\` trước khi mở `diskpulse.exe`.
+
+### Hoặc sao lưu lên Git (Private Repo)
 
 > **Lưu ý bảo mật:** Không đẩy `diskpulse.db` hoặc `config.json` lên repo **public**, vì `diskpulse.db` chứa đường dẫn thư mục/file trên máy bạn và `config.json` có thể chứa Webhook/Telegram token. Hãy tạo một repo **private** riêng để lưu dữ liệu.
 

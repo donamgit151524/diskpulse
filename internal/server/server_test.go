@@ -1,6 +1,8 @@
 package server
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -121,5 +123,23 @@ func TestDiffAlertsAndStaticEndpoints(t *testing.T) {
 	}
 	if len(unread) != 0 {
 		t.Errorf("expected 0 unread alerts after ack-all, got %d", len(unread))
+	}
+
+	// Verify backup download endpoint returns a valid zip containing diskpulse.db and config.json.
+	bkRec := httptest.NewRecorder()
+	handler.ServeHTTP(bkRec, httptest.NewRequest(http.MethodGet, "/api/backup/download", nil))
+	if bkRec.Code != http.StatusOK {
+		t.Fatalf("GET /api/backup/download status=%d body=%s", bkRec.Code, bkRec.Body.String())
+	}
+	zr, err := zip.NewReader(bytes.NewReader(bkRec.Body.Bytes()), int64(bkRec.Body.Len()))
+	if err != nil {
+		t.Fatalf("zip.NewReader: %v", err)
+	}
+	found := map[string]bool{}
+	for _, f := range zr.File {
+		found[f.Name] = true
+	}
+	if !found["diskpulse.db"] || !found["config.json"] {
+		t.Errorf("backup zip missing expected files: %+v", found)
 	}
 }

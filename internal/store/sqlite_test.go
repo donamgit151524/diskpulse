@@ -93,4 +93,18 @@ func TestStoreSaveQueryAndRetention(t *testing.T) {
 	if len(files) != 1 || files[0].Path != `C:\Users\big.vhdx` {
 		t.Errorf("unexpected large files: %+v", files)
 	}
+
+	backupPath := filepath.Join(t.TempDir(), "backup.db")
+	if err := st.ExportBackup(backupPath); err != nil {
+		t.Fatalf("ExportBackup: %v", err)
+	}
+	backupStore, err := Open(backupPath)
+	if err != nil {
+		t.Fatalf("Open backup: %v", err)
+	}
+	defer backupStore.Close()
+	backupSnaps, err := backupStore.ListSnapshots(`C:\`, 10)
+	if err != nil || len(backupSnaps) != 2 {
+		t.Fatalf("unexpected backup snapshots: %+v (err=%v)", backupSnaps, err)
+	}
 }

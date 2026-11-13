@@ -654,6 +654,11 @@ document.querySelectorAll(".nav-btn").forEach((btn) => {
 });
 
 document.getElementById("btn-scan-all").addEventListener("click", () => window.triggerScan(""));
+const downloadBackup = () => {
+  window.location.href = "/api/backup/download";
+};
+document.getElementById("btn-backup").addEventListener("click", downloadBackup);
+document.getElementById("btn-backup-settings").addEventListener("click", downloadBackup);
 document.getElementById("btn-refresh").addEventListener("click", () => loadStatus());
 document.getElementById("btn-overview-alerts").addEventListener("click", () => switchTab("alerts"));
 
