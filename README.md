@@ -56,3 +56,42 @@ go build -ldflags="-s -w -H=windowsgui" -o diskpulse.exe ./cmd/diskpulse
 - Mở `diskpulse.exe`: ứng dụng nằm ở **System Tray** (góc dưới phải màn hình) và mở Dashboard tại `http://127.0.0.1:47821`.
 - Dùng cờ `--background` (`diskpulse.exe --background`) để chạy ngầm mà không tự bật trình duyệt.
 - Dữ liệu cấu hình và database SQLite được lưu tại `%LocalAppData%\DiskPulse\`.
+
+---
+
+## Sao lưu dữ liệu lên Git (Private Repo)
+
+> **Lưu ý bảo mật:** Không đẩy `diskpulse.db` hoặc `config.json` lên repo **public**, vì `diskpulse.db` chứa đường dẫn thư mục/file trên máy bạn và `config.json` có thể chứa Webhook/Telegram token. Hãy tạo một repo **private** riêng để lưu dữ liệu.
+
+### 1. Đẩy dữ liệu hiện tại lên GitHub (lần đầu)
+
+```powershell
+# Tắt DiskPulse để SQLite ghi trọn vẹn dữ liệu từ file -wal vào diskpulse.db
+Get-Process -Name "diskpulse" -ErrorAction SilentlyContinue | Stop-Process -Force
+
+cd "$env:LOCALAPPDATA\DiskPulse"
+git init -b main
+git add diskpulse.db config.json
+git commit -m "Backup DiskPulse data"
+gh repo create diskpulse-backup --private --source=. --remote=origin --push
+```
+
+### 2. Cập nhật bản sao lưu định kỳ
+
+```powershell
+Get-Process -Name "diskpulse" -ErrorAction SilentlyContinue | Stop-Process -Force
+cd "$env:LOCALAPPDATA\DiskPulse"
+git add diskpulse.db config.json
+git commit -m "Backup $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+git push
+```
+
+### 3. Khôi phục dữ liệu khi reset máy hoặc sang máy mới
+
+Chạy trước khi mở DiskPulse (hoặc tắt DiskPulse trước khi chép đè):
+
+```powershell
+gh repo clone diskpulse-backup "$env:LOCALAPPDATA\DiskPulse"
+```
+
+Sau đó cài/mở lại `diskpulse.exe`, toàn bộ lịch sử snapshot và cấu hình sẽ được giữ nguyên.
