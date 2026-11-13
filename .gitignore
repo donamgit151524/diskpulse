@@ -1,0 +1,19 @@
+# Binaries & build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Local runtime data
+*.db
+*.db-wal
+*.db-shm
+config.json
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

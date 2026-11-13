@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiskPulse — Theo dõi biến động dung lượng ổ cứng</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">DP</div>
+        <div>
+          <div class="brand-name">DiskPulse</div>
+          <div class="brand-sub">Disk Growth Tracker</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-btn active" data-tab="overview">Tổng quan</button>
+        <button class="nav-btn" data-tab="diff">So sánh biến động</button>
+        <button class="nav-btn" data-tab="explorer">Cây thư mục &amp; File lớn</button>
+        <button class="nav-btn" data-tab="alerts">
+          Cảnh báo <span id="alert-badge" class="badge hidden">0</span>
+        </button>
+        <button class="nav-btn" data-tab="settings">Cài đặt</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="btn-scan-all" class="btn btn-primary full-width">Quét tất cả ngay</button>
+        <div id="sidebar-status" class="sidebar-status">Sẵn sàng</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div id="scan-banner" class="scan-banner hidden">
+        <div class="spinner"></div>
+        <div class="scan-banner-info">
+          <div id="scan-banner-title">Đang quét ổ đĩa...</div>
+          <div id="scan-banner-path" class="mono muted"></div>
+        </div>
+      </div>
+
+      <!-- TAB: OVERVIEW -->
+      <section id="tab-overview" class="tab-panel active">
+        <header class="page-header">
+          <div>
+            <h1>Tổng quan ổ đĩa</h1>
+            <p class="muted">Theo dõi dung lượng hiện tại, biến động 24h và dự báo ngày đầy ổ.</p>
+          </div>
+          <div class="header-actions">
+            <button id="btn-refresh" class="btn btn-ghost">Làm mới</button>
+          </div>
+        </header>
+
+        <div id="drive-cards" class="drive-grid"></div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>Lịch sử dung lượng theo thời gian</h2>
+              <p class="muted">Biến động dung lượng đã dùng qua các lần quét snapshot</p>
+            </div>
+            <select id="overview-drive-select" class="input"></select>
+          </div>
+          <div id="history-chart" class="chart-wrap"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Cảnh báo chưa đọc gần đây</h2>
+            <button id="btn-overview-alerts" class="btn btn-ghost btn-sm">Xem tất cả</button>
+          </div>
+          <div id="overview-alerts-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB: DIFF / TIME MACHINE -->
+      <section id="tab-diff" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h1>So sánh biến động (Time Machine)</h1>
+            <p class="muted">Tìm chính xác thư mục nào vừa phình to ra giữa 2 mốc thời gian.</p>
+          </div>
+        </header>
+
+        <div class="card controls-card">
+          <div class="diff-controls-row">
+            <label>Ổ đĩa
+              <select id="diff-drive" class="input"></select>
+            </label>
+            <div class="preset-group">
+              <span class="label-inline">Chọn nhanh:</span>
+              <button class="btn btn-ghost btn-sm preset-btn active" data-preset="24h">24 giờ qua</button>
+              <button class="btn btn-ghost btn-sm preset-btn" data-preset="7d">7 ngày qua</button>
+              <button class="btn btn-ghost btn-sm preset-btn" data-preset="30d">30 ngày qua</button>
+              <button class="btn btn-ghost btn-sm preset-btn" data-preset="prev">Lần quét trước</button>
+            </div>
+          </div>
+
+          <div class="diff-controls-row">
+            <label>Mốc trước (A)
+              <select id="diff-snap-a" class="input"></select>
+            </label>
+            <label>Mốc sau (B)
+              <select id="diff-snap-b" class="input"></select>
+            </label>
+            <button id="btn-run-diff" class="btn btn-primary">So sánh 2 mốc</button>
+          </div>
+        </div>
+
+        <div id="diff-content"></div>
+      </section>
+
+      <!-- TAB: EXPLORER & LARGE FILES -->
+      <section id="tab-explorer" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h1>Cây thư mục &amp; File lớn</h1>
+            <p class="muted">Duyệt chi tiết snapshot mới nhất để thấy nhánh chiếm dụng nhiều nhất.</p>
+          </div>
+          <select id="explorer-drive" class="input"></select>
+        </header>
+
+        <div class="card">
+          <div class="card-header">
+            <div id="explorer-breadcrumbs" class="breadcrumbs"></div>
+            <button id="btn-open-current" class="btn btn-ghost btn-sm">Mở trong Explorer</button>
+          </div>
+          <div id="explorer-tree"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Top file đơn lẻ lớn nhất</h2>
+          </div>
+          <div id="large-files-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB: ALERTS -->
+      <section id="tab-alerts" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h1>Trung tâm cảnh báo</h1>
+            <p class="muted">Lịch sử cảnh báo ổ sắp đầy, tăng đột biến, tăng âm thầm và dự báo.</p>
+          </div>
+          <div class="header-actions">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="alerts-unread-only" /> Chỉ hiện chưa đọc
+            </label>
+            <button id="btn-ack-all" class="btn btn-ghost">Đánh dấu tất cả đã đọc</button>
+          </div>
+        </header>
+
+        <div class="card">
+          <div id="alerts-full-list"></div>
+        </div>
+      </section>
+
+      <!-- TAB: SETTINGS -->
+      <section id="tab-settings" class="tab-panel">
+        <header class="page-header">
+          <div>
+            <h1>Cài đặt DiskPulse</h1>
+            <p class="muted">Tùy chỉnh ổ đĩa theo dõi, tần suất quét, ngưỡng cảnh báo và kênh thông báo.</p>
+          </div>
+        </header>
+
+        <form id="settings-form" class="card settings-form">
+          <div class="settings-section">
+            <h3>Ổ đĩa &amp; Lịch quét</h3>
+            <div id="settings-drives-box" class="checkbox-grid"></div>
+            <div class="form-grid">
+              <label>Chu kỳ quét tự động (phút)
+                <input type="number" id="cfg-interval" class="input" min="5" />
+              </label>
+              <label>Độ sâu cây lưu tối thiểu (MaxDepth)
+                <input type="number" id="cfg-maxdepth" class="input" min="2" max="12" />
+              </label>
+              <label>Ngưỡng lưu nhánh sâu (MB)
+                <input type="number" id="cfg-minpersist-mb" class="input" min="1" />
+              </label>
+              <label>Số luồng quét (Workers)
+                <input type="number" id="cfg-workers" class="input" min="1" max="8" />
+              </label>
+            </div>
+            <div class="toggle-row">
+              <label class="checkbox-inline">
+                <input type="checkbox" id="cfg-autostart" /> Khởi động cùng Windows
+              </label>
+              <label class="checkbox-inline">
+                <input type="checkbox" id="cfg-paused" /> Tạm dừng quét tự động
+              </label>
+            </div>
+            <label>Danh sách thư mục loại trừ (mỗi dòng 1 tên hoặc đường dẫn)
+              <textarea id="cfg-ignores" class="input" rows="4"></textarea>
+            </label>
+          </div>
+
+          <div class="settings-section">
+            <h3>Ngưỡng cảnh báo thông minh</h3>
+            <div class="form-grid">
+              <label>Cảnh báo sắp đầy (%)
+                <input type="number" step="0.5" id="cfg-low-pct" class="input" />
+              </label>
+              <label>Cảnh báo sắp đầy (GB)
+                <input type="number" step="1" id="cfg-low-gb" class="input" />
+              </label>
+              <label>Khẩn cấp đầy ổ (%)
+                <input type="number" step="0.5" id="cfg-crit-pct" class="input" />
+              </label>
+              <label>Khẩn cấp đầy ổ (GB)
+                <input type="number" step="1" id="cfg-crit-gb" class="input" />
+              </label>
+              <label>Tăng đột biến 24h (GB)
+                <input type="number" step="0.5" id="cfg-spike-gb" class="input" />
+              </label>
+              <label>Số lần tăng âm thầm liên tiếp
+                <input type="number" id="cfg-creep-runs" class="input" min="2" />
+              </label>
+              <label>Tổng mức tăng âm thầm tối thiểu (GB)
+                <input type="number" step="0.5" id="cfg-creep-gb" class="input" />
+              </label>
+              <label>Cảnh báo dự báo đầy trong (ngày)
+                <input type="number" id="cfg-forecast-days" class="input" min="1" />
+              </label>
+              <label>Thời gian chờ chống spam (giờ)
+                <input type="number" id="cfg-cooldown" class="input" min="1" />
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Kênh thông báo</h3>
+            <label class="checkbox-inline">
+              <input type="checkbox" id="cfg-toast" /> Hiện thông báo Windows (System Tray Toast)
+            </label>
+            <div class="form-grid">
+              <label>Discord / Webhook URL (tùy chọn)
+                <input type="url" id="cfg-webhook" class="input" placeholder="https://discord.com/api/webhooks/..." />
+              </label>
+              <label>Telegram Bot Token (tùy chọn)
+                <input type="text" id="cfg-tg-token" class="input" placeholder="123456:ABC-DEF..." />
+              </label>
+              <label>Telegram Chat ID (tùy chọn)
+                <input type="text" id="cfg-tg-chat" class="input" placeholder="123456789" />
+              </label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Lưu cài đặt</button>
+            <span id="settings-msg" class="muted"></span>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
