@@ -460,8 +460,11 @@ window.setDiffTagFilter = function (tag) {
 async function loadExplorerTab() {
   const drives = state.status?.drives || [];
   const sel = document.getElementById("explorer-drive");
-  if (!sel.options.length && drives.length) {
-    sel.innerHTML = drives.map((d) => `<option value="${esc(d.drive.root)}">${esc(d.drive.root)}</option>`).join("");
+  const roots = drives.map((d) => d.drive.root);
+  const current = Array.from(sel.options).map((o) => o.value);
+  if (roots.length && roots.join("|") !== current.join("|")) {
+    sel.innerHTML = roots.map((r) => `<option value="${esc(r)}">${esc(r)}</option>`).join("");
+    if (state.explorerDrive && roots.includes(state.explorerDrive)) sel.value = state.explorerDrive;
   }
   const drive = sel.value || state.explorerDrive;
   if (!drive) return;
@@ -480,13 +483,14 @@ async function loadExplorerTab() {
   }
   await Promise.all([
     loadExplorerChildren(state.explorerSnapId, state.explorerPath),
-    loadLargeFiles(state.explorerSnapId),
+    loadLargeFiles(state.explorerSnapId, state.explorerPath),
   ]);
 }
 
 async function loadExplorerChildren(snapId, parentPath) {
   state.explorerPath = parentPath;
   renderBreadcrumbs(parentPath);
+  loadLargeFiles(snapId, parentPath);
   const data = await api(`/api/snapshot-children?snapshot_id=${snapId}&path=${encodeURIComponent(parentPath)}`);
   const children = data.children || [];
   const treeEl = document.getElementById("explorer-tree");
@@ -521,9 +525,10 @@ window.drillExplorer = function (path) {
   loadExplorerChildren(state.explorerSnapId, path);
 };
 
-async function loadLargeFiles(snapId) {
+async function loadLargeFiles(snapId, folder) {
   const data = await api(`/api/snapshot-large-files?snapshot_id=${snapId}`);
-  const files = data.files || [];
+  const prefix = (folder || "").toUpperCase().replace(/\\+$/, "") + "\\";
+  const files = (data.files || []).filter((f) => !folder || f.path.toUpperCase().startsWith(prefix));
   const el = document.getElementById("large-files-list");
   if (!files.length) {
     el.innerHTML = `<p class="muted">Không có file lớn nào vượt ngưỡng cấu hình.</p>`;
